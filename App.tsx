@@ -54,13 +54,13 @@ export type RootStackParamList = {
   Detail: { listing: Listing };
 };
 
-const FONT_FAMILY = 'System'; 
+const FONT_FAMILY = 'Open Sans'; 
 
 const getTheme = (isDark: boolean) => ({
   background: isDark ? '#121212' : '#FFFFFF',
-  card: isDark ? '#1E1E1E' : '#FFFFFF',
+  card: isDark ? '#634C3D' : '#FFFFFF',
   text: isDark ? '#FFFFFF' : '#1F2937',
-  subText: isDark ? '#A0A0A0' : '#634C3D',
+  subText: isDark ? '#FFFFFF' : '#1F2937',
   border: isDark ? '#333333' : '#E5E7EB',
   inputBg: isDark ? '#2C2C2C' : '#F3F4F6',
   primary: '#00ACFF',
