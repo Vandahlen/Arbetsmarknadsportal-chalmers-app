@@ -85,24 +85,13 @@ export type RootStackParamList = {
   Detail: { listing: Listing };
 };
 
-const FONT_FAMILY = 'Open Sans'; 
-
-const BRAND_COLORS = {
-  blue: '#00ACFF',
-  purple: '#843690',
-  red: '#D8004D',
-  matteRed: '#F8686D',
-  orange: '#F86600',
-  warmGrey: '#634C3D',
-  green: '#27AD72',
-  turquoise: '#7CCDC2',
-};
+const FONT_FAMILY = 'System'; 
 
 const getTheme = (isDark: boolean) => ({
   background: isDark ? '#121212' : '#FFFFFF',
-  card: isDark ? '#1E1E1E' : '#FFFFFF',
+  card: isDark ? '#634C3D' : '#FFFFFF',
   text: isDark ? '#FFFFFF' : '#1F2937',
-  subText: isDark ? '#A0A0A0' : BRAND_COLORS.warmGrey,
+  subText: isDark ? '#A0A0A0' : '#634C3D',
   border: isDark ? '#333333' : '#E5E7EB',
   inputBg: isDark ? '#2C2C2C' : '#F3F4F6',
   primary: BRAND_COLORS.blue,
