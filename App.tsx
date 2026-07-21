@@ -1,6 +1,6 @@
 // ==========================================
 // App.tsx 
-// (Read-Only, Dark Mode, Bilingual, React Navigation, Hot-Swappable DB)
+// (Read-Only, Dark Mode, Bilingual, React Nav, Auto-Filter & Dynamic Tabs)
 // ==========================================
 
 import 'react-native-url-polyfill/auto';
@@ -14,14 +14,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import Config from 'react-native-config';
 
-
-// --- 1. HOT-SWAPPABLE DATABASE CONFIGURATION ---
-// Config pulls from your root .env file automatically. 
-// Fallbacks are provided to prevent crashes during initial setup.
-const SUPABASE_URL = Config.SUPABASE_URL || 'https://umkejklqekghrrkskgun.supabase.co';
-const SUPABASE_ANON_KEY = Config.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVta2Vqa2xxZWtnaHJya3NrZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NDExOTEsImV4cCI6MjEwMDExNzE5MX0.IQe5oh0eTmBUMucstnFjYMyEtCWsKdWWUwMujhAx9NE';
+// --- 1. HARDCODED DATABASE CONFIGURATION (BYPASS) ---
+const SUPABASE_URL = 'https://umkejklqekghrrkskgun.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVta2Vqa2xxZWtnaHJya3NrZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NDExOTEsImV4cCI6MjEwMDExNzE5MX0.IQe5oh0eTmBUMucstnFjYMyEtCWsKdWWUwMujhAx9NE';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -32,12 +28,47 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
-// --- 2. TYPES & THEME ---
-type Category = 'Exjobb' | 'Mentorship' | 'Job';
+// --- 2. TYPES, THEME & DYNAMIC MAPPINGS ---
+
+// Chalmers Labor Market Committees mapped by program code
+const PROGRAM_COMMITTEES: Record<string, string> = {
+  'D': 'DAG',
+  'IT': 'snIT',
+  'F': 'FARM',
+  'M': 'MARM',
+  'V': 'VARB',
+  'Z': 'ZARM',
+  'K': 'KARM',
+  'I': 'IARM',
+  'E': 'E-ARM', 
+};
+
+// Fallback generator in case a new program is added
+const getCommitteeName = (program: string) => 
+  PROGRAM_COMMITTEES[program.toUpperCase()] || `${program.toUpperCase()}-ARM`;
+
+// Standard aliases for database normalization
+const CATEGORY_ALIASES: Record<string, string[]> = {
+  Examensarbete: ['examensarbete', 'thesis'],
+  Mentorskap: ['mentorskap', 'mentorship'],
+  Jobb: ['jobb', 'job'],
+  CHARM: ['charm'],
+};
+
+const normalizeCategory = (value: string): string => {
+  const normalizedValue = value.trim().toLowerCase();
+  for (const [category, aliases] of Object.entries(CATEGORY_ALIASES)) {
+    if (aliases.some(alias => normalizedValue.includes(alias))) {
+      return category;
+    }
+  }
+  // If it's a dynamic committee like 'DAG', just pass it through exactly as written
+  return value.trim(); 
+};
 
 interface Listing {
   id: string;
-  category: Category;
+  category: string;
   title: string;
   company: string;
   programs: string[];
@@ -54,23 +85,34 @@ export type RootStackParamList = {
   Detail: { listing: Listing };
 };
 
-const FONT_FAMILY = 'System'; 
+const FONT_FAMILY = 'Open Sans'; 
+
+const BRAND_COLORS = {
+  blue: '#00ACFF',
+  purple: '#843690',
+  red: '#D8004D',
+  matteRed: '#F8686D',
+  orange: '#F86600',
+  warmGrey: '#634C3D',
+  green: '#27AD72',
+  turquoise: '#7CCDC2',
+};
 
 const getTheme = (isDark: boolean) => ({
   background: isDark ? '#121212' : '#FFFFFF',
   card: isDark ? '#1E1E1E' : '#FFFFFF',
   text: isDark ? '#FFFFFF' : '#1F2937',
-  subText: isDark ? '#A0A0A0' : '#634C3D',
+  subText: isDark ? '#A0A0A0' : BRAND_COLORS.warmGrey,
   border: isDark ? '#333333' : '#E5E7EB',
   inputBg: isDark ? '#2C2C2C' : '#F3F4F6',
-  primary: '#00ACFF',
-  orange: '#F86600',
+  primary: BRAND_COLORS.blue,
+  orange: BRAND_COLORS.orange,
 });
 
 // --- 3. BILINGUAL SUPPORT (i18n Context) ---
 const translations = {
   en: {
-    title: 'Thesis Portal',
+    title: 'Job Market',
     search: 'Search keywords, programs, location...',
     about: 'About the Role',
     apply: 'Apply externally',
@@ -79,10 +121,16 @@ const translations = {
     term: 'TERM',
     location: 'LOCATION',
     empty: 'No listings found matching your criteria.',
-    langToggle: 'SV'
+    langToggle: 'SV',
+    categories: {
+      Examensarbete: 'Thesis',
+      Mentorskap: 'Mentorship',
+      Jobb: 'Job',
+      CHARM: 'CHARM'
+    } as Record<string, string>
   },
   sv: {
-    title: 'Exjobbsportal',
+    title: 'Arbetsmarknad',
     search: 'Sök nyckelord, program, plats...',
     about: 'Om Rollen',
     apply: 'Ansök externt',
@@ -91,7 +139,13 @@ const translations = {
     term: 'TERMIN',
     location: 'PLATS',
     empty: 'Inga annonser hittades.',
-    langToggle: 'EN'
+    langToggle: 'EN',
+    categories: {
+      Examensarbete: 'Examensarbete',
+      Mentorskap: 'Mentorskap',
+      Jobb: 'Jobb',
+      CHARM: 'CHARM'
+    } as Record<string, string>
   }
 };
 
@@ -112,7 +166,6 @@ const useListings = () => {
     setIsLoading(true);
     setError(null);
     try {
-      
       const { data, error: fetchError } = await supabase
         .from('listings')
         .select('*')
@@ -140,20 +193,36 @@ type DetailProps = NativeStackScreenProps<RootStackParamList, 'Detail'>;
 
 const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
   const { listings, isLoading, error } = useListings();
-  const [activeTab, setActiveTab] = useState<Category>('Exjobb');
+  const [activeTab, setActiveTab] = useState<string>('Examensarbete');
   const [searchQuery, setSearchQuery] = useState('');
   
   const { t, toggleLang } = useContext(I18nContext);
   const theme = getTheme(useColorScheme() === 'dark');
 
+  // --- AUTOMATIC PROGRAM FILTER & DYNAMIC TABS ---
+  const userProgram = 'D'; // Hardcoded for testing. Replace with User Context later.
+  
+  // Calculate tabs on the fly. Includes standard tabs, CHARM, and the specific program committee.
+  const dynamicTabs = useMemo(() => {
+    const committeeTab = getCommitteeName(userProgram);
+    return ['Examensarbete', 'Mentorskap', 'Jobb', 'CHARM', committeeTab];
+  }, [userProgram]);
+
   const filteredData = useMemo(() => {
     return listings.filter(item => {
-      const matchesTab = item.category === activeTab;
+      // 1. Tab Match
+      const matchesTab = normalizeCategory(item.category).toLowerCase() === activeTab.toLowerCase();
+      
+      // 2. Search Match
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             item.company.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
+      
+      // 3. Background Program Match (Enforces that the listing is actually meant for their program)
+      const matchesProgram = item.programs?.some(p => p.toLowerCase() === userProgram.toLowerCase());
+
+      return matchesTab && matchesSearch && matchesProgram;
     });
-  }, [listings, activeTab, searchQuery]);
+  }, [listings, activeTab, searchQuery, userProgram]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
@@ -164,16 +233,21 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.tabContainer, { borderBottomColor: theme.border }]}>
-        {(['Exjobb', 'Mentorship', 'Job'] as Category[]).map((tab) => (
-          <TouchableOpacity 
-            key={tab} 
-            style={[styles.tabButton, activeTab === tab && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, { color: activeTab === tab ? theme.primary : theme.subText }]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ borderBottomWidth: 1, borderBottomColor: theme.border, marginBottom: 16 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContent}>
+          {dynamicTabs.map((tab) => (
+            <TouchableOpacity 
+              key={tab} 
+              style={[styles.tabButton, activeTab === tab && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, { color: activeTab === tab ? theme.primary : theme.subText }]}>
+                {/* Use translated name if it exists, otherwise fall back to the dynamic committee name */}
+                {t.categories[tab] || tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <View style={styles.searchContainer}>
@@ -192,7 +266,7 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={{ color: '#D8004D' }}>{error}</Text>
+          <Text style={{ color: BRAND_COLORS.red }}>{error}</Text>
         </View>
       ) : (
         <FlatList
@@ -278,8 +352,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function App() {
   const isDark = useColorScheme() === 'dark';
   
-  // Language State Management
-  const [lang, setLang] = useState<Language>('sv'); // Default to Swedish for Chalmers
+  const [lang, setLang] = useState<Language>('sv'); 
   const toggleLang = () => setLang(prev => prev === 'en' ? 'sv' : 'en');
   
   return (
@@ -297,26 +370,30 @@ export default function App() {
   );
 }
 
-// --- 7. BASE STYLESHEET ---
+// --- 7. BASE STYLESHEET (ALIGNED WITH GRAPHICAL PROFILE) ---
 const styles = StyleSheet.create({
   container: { flex: 1 },
   title: { fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: '700' },
   heading1: { fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: '700' },
   heading2: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600', marginBottom: 4 },
   subheading1: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' },
-  caption1: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', marginTop: 4 },
-  caption2: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '600', opacity: 0.7 },
-  label: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '700', marginRight: 8, marginTop: 4 },
+  caption1: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', marginTop: 4, textTransform: 'uppercase' },
+  caption2: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '600', opacity: 0.7, textTransform: 'uppercase' },
+  label: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '700', marginRight: 8, marginTop: 4, textTransform: 'uppercase' },
   paragraph1: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '400', lineHeight: 24, marginTop: 8 },
-  primaryButton: { borderRadius: 8, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
+  paragraph2: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '400', lineHeight: 20 },
+  primaryButton: { borderRadius: 24, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
   secondaryButton: { paddingVertical: 8, paddingHorizontal: 0 },
   secondaryButtonText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600' },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   spacer: { height: 32 },
-  tabContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, borderBottomWidth: 1 },
+  
+  // Tab Updates
+  tabScrollContent: { paddingHorizontal: 20, paddingBottom: 0 },
   tabButton: { paddingVertical: 12, marginRight: 24 },
   tabText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600' },
+  
   searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
   searchInput: { borderRadius: 8, padding: 12, fontFamily: FONT_FAMILY, fontSize: 13 },
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },

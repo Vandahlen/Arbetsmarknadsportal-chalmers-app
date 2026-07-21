@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --color-chalmersBlue: #00ACFF;
+}
+
+body {
+  background-color: #f9fafb;
+}
