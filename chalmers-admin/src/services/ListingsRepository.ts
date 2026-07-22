@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import imageCompression from 'browser-image-compression';
 
-// Fallback configuration using hardcoded project keys if .env is not yet set
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://umkejklqekghrrkskgun.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVta2Vqa2xxZWtnaHJya3NrZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NDExOTEsImV4cCI6MjEwMDExNzE5MX0.IQe5oh0eTmBUMucstnFjYMyEtCWsKdWWUwMujhAx9NE';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_ANON_KEY';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export interface ListingData {
-  type: 'job' | 'thesis' | 'event';
+  id?: string;
+  type: 'event' | 'thesis' | 'job' | 'mentorship';
   titleSv: string;
   titleEn: string;
   descriptionSv: string;
@@ -15,51 +16,61 @@ export interface ListingData {
   company: string;
   programs: string[];
   location: string;
-  status: 'draft' | 'published';
-  contactName?: string;
-  contactEmail?: string;
-  compensationType?: string;
-  applicationUrl?: string;
+  status: 'draft' | 'published' | 'archived';
+  workFormat?: 'remote' | 'onsite' | 'hybrid';
+  workLoad?: 'full-time' | 'part-time';
+  keywords?: string;
+  applicationDeadline?: string;
+  term?: 'HT' | 'VT' | 'Båda';
   eventStart?: string;
   eventEnd?: string;
   foodPreferences?: boolean;
-  maxCapacity?: number;
+  applicationUrl?: string;
+  logoUrl?: string;
+  coverUrl?: string;
 }
 
 export const ListingsRepository = {
-  async uploadImage(file: File): Promise<string | null> {
+  async uploadImage(file: File, folder: string): Promise<string | null> {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
+      const options = { maxSizeMB: 0.3, maxWidthOrHeight: 1200, useWebWorker: true };
+      const compressedFile = await imageCompression(file, options);
+      const fileName = `${Math.random()}.${compressedFile.name.split('.').pop()}`;
+      const filePath = `${folder}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(filePath, file);
+      const { error } = await supabase.storage.from('media').upload(filePath, compressedFile);
+      if (error) throw error;
 
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('media').getPublicUrl(filePath);
-      return data.publicUrl;
+      return supabase.storage.from('media').getPublicUrl(filePath).data.publicUrl;
     } catch (error) {
       console.error('Upload failed:', error);
       return null;
     }
   },
 
-  async create(data: ListingData, imageFile?: File): Promise<void> {
-    let imageUrl = null;
-    
-    if (imageFile) {
-      imageUrl = await this.uploadImage(imageFile);
-    }
+  async create(data: ListingData, logoFile?: File | null, coverFile?: File | null): Promise<void> {
+    const logoUrl = logoFile ? await this.uploadImage(logoFile, 'logos') : null;
+    const coverUrl = coverFile ? await this.uploadImage(coverFile, 'covers') : null;
+    const { error } = await supabase.from('listings').insert([{ ...data, logoUrl, coverUrl }]);
+    if (error) throw new Error(error.message);
+  },
 
-    const payload = { ...data, imageUrl };
+  async getAll(): Promise<ListingData[]> {
+    const { data, error } = await supabase.from('listings').select('*').order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data as ListingData[];
+  },
 
-    const { error } = await supabase.from('listings').insert([payload]);
-    
-    if (error) {
-      throw new Error(`Database error: ${error.message}`);
-    }
+  async update(id: string, data: ListingData, logoFile?: File | null, coverFile?: File | null): Promise<void> {
+    const updates = { ...data };
+    if (logoFile) updates.logoUrl = await this.uploadImage(logoFile, 'logos') || undefined;
+    if (coverFile) updates.coverUrl = await this.uploadImage(coverFile, 'covers') || undefined;
+    const { error } = await supabase.from('listings').update(updates).eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from('listings').delete().eq('id', id);
+    if (error) throw new Error(error.message);
   }
 };
