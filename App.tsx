@@ -7,7 +7,7 @@ import 'react-native-url-polyfill/auto';
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react';
 import {
   StyleSheet, Text, View, TextInput, TouchableOpacity,
-  FlatList, ScrollView, StatusBar, ActivityIndicator, useColorScheme
+  FlatList, ScrollView, StatusBar, ActivityIndicator, useColorScheme, Image
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -62,22 +62,23 @@ const normalizeCategory = (value: string): string => {
       return category;
     }
   }
-  // If it's a dynamic committee like 'DAG', just pass it through exactly as written
   return value.trim(); 
 };
 
 interface Listing {
   id: string;
-  category: string;
-  title: string;
+  type: string;
+  titleSv: string;
+  titleEn: string;
+  descriptionSv: string;
+  descriptionEn: string;
   company: string;
   programs: string[];
-  deadline: string;
-  term: string;
   location: string;
-  description: string;
-  logoColor: string;
-  coverColor?: string;
+  applicationDeadline: string | null;
+  term: string | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
 }
 
 export type RootStackParamList = {
@@ -86,6 +87,12 @@ export type RootStackParamList = {
 };
 
 const FONT_FAMILY = 'System'; 
+
+const BRAND_COLORS = {
+  blue: '#00ACFF',
+  orange: '#FF8C00',
+  red: '#FF3B30',
+};
 
 const getTheme = (isDark: boolean) => ({
   background: isDark ? '#121212' : '#FFFFFF',
@@ -151,14 +158,14 @@ const useListings = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+ const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const { data, error: fetchError } = await supabase
         .from('listings')
         .select('*')
-        .order('deadline', { ascending: true });
+        .order('applicationDeadline', { ascending: true }); // <-- Changed from 'deadline' to 'applicationDeadline'
 
       if (fetchError) throw new Error(fetchError.message);
       setListings(data as Listing[] || []);
@@ -185,13 +192,12 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<string>('Examensarbete');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const { t, toggleLang } = useContext(I18nContext);
+  const { t, lang, toggleLang } = useContext(I18nContext);
   const theme = getTheme(useColorScheme() === 'dark');
 
   // --- AUTOMATIC PROGRAM FILTER & DYNAMIC TABS ---
   const userProgram = 'D'; // Hardcoded for testing. Replace with User Context later.
   
-  // Calculate tabs on the fly. Includes standard tabs, CHARM, and the specific program committee.
   const dynamicTabs = useMemo(() => {
     const committeeTab = getCommitteeName(userProgram);
     return ['Examensarbete', 'Mentorskap', 'Jobb', 'CHARM', committeeTab];
@@ -199,19 +205,15 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
 
   const filteredData = useMemo(() => {
     return listings.filter(item => {
-      // 1. Tab Match
-      const matchesTab = normalizeCategory(item.category).toLowerCase() === activeTab.toLowerCase();
-      
-      // 2. Search Match
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            item.company.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // 3. Background Program Match (Enforces that the listing is actually meant for their program)
+      const matchesTab = normalizeCategory(item.type).toLowerCase() === activeTab.toLowerCase();
+      const localizedTitle = (lang === 'sv' ? item.titleSv : item.titleEn) ?? '';
+      const matchesSearch = localizedTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (item.company ?? '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesProgram = item.programs?.some(p => p.toLowerCase() === userProgram.toLowerCase());
 
       return matchesTab && matchesSearch && matchesProgram;
     });
-  }, [listings, activeTab, searchQuery, userProgram]);
+  }, [listings, activeTab, searchQuery, userProgram, lang]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
@@ -231,7 +233,6 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
               onPress={() => setActiveTab(tab)}
             >
               <Text style={[styles.tabText, { color: activeTab === tab ? theme.primary : theme.subText }]}>
-                {/* Use translated name if it exists, otherwise fall back to the dynamic committee name */}
                 {t.categories[tab] || tab}
               </Text>
             </TouchableOpacity>
@@ -268,9 +269,13 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
               style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]} 
               onPress={() => navigation.navigate('Detail', { listing: item })}
             >
-              <View style={[styles.logoPlaceholder, { backgroundColor: item.logoColor }]} />
+              {item.logoUrl ? (
+                <Image source={{ uri: item.logoUrl }} style={styles.logoPlaceholder} />
+              ) : (
+                <View style={[styles.logoPlaceholder, { backgroundColor: theme.border }]} />
+              )}
               <View style={styles.cardContent}>
-                <Text style={[styles.heading2, { color: theme.text }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.heading2, { color: theme.text }]} numberOfLines={2}>{lang === 'sv' ? item.titleSv : item.titleEn}</Text>
                 <Text style={[styles.subheading1, { color: theme.subText }]}>{item.company}</Text>
                 <View style={styles.tagContainer}>
                   {item.programs?.map((prog, idx) => (
@@ -288,8 +293,10 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
 
 const DetailScreen: React.FC<DetailProps> = ({ route, navigation }) => {
   const { listing } = route.params;
-  const { t } = useContext(I18nContext);
+  const { t, lang } = useContext(I18nContext);
   const theme = getTheme(useColorScheme() === 'dark');
+  const title = lang === 'sv' ? listing.titleSv : listing.titleEn;
+  const description = lang === 'sv' ? listing.descriptionSv : listing.descriptionEn;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
@@ -299,11 +306,19 @@ const DetailScreen: React.FC<DetailProps> = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.detailScrollContent}>
-        <View style={[styles.coverPhotoPlaceholder, { backgroundColor: listing.coverColor || theme.border }]} />
+        {listing.coverUrl ? (
+          <Image source={{ uri: listing.coverUrl }} style={styles.coverPhotoPlaceholder} />
+        ) : (
+          <View style={[styles.coverPhotoPlaceholder, { backgroundColor: theme.border }]} />
+        )}
         <View style={styles.detailHeaderLayout}>
-           <View style={[styles.detailLogoPlaceholder, { backgroundColor: listing.logoColor, borderColor: theme.background }]} />
+           {listing.logoUrl ? (
+             <Image source={{ uri: listing.logoUrl }} style={[styles.detailLogoPlaceholder, { borderColor: theme.background }]} />
+           ) : (
+             <View style={[styles.detailLogoPlaceholder, { backgroundColor: theme.border, borderColor: theme.background }]} />
+           )}
            <View style={styles.detailHeaderContent}>
-             <Text style={[styles.heading1, { color: theme.text }]}>{listing.title}</Text>
+             <Text style={[styles.heading1, { color: theme.text }]}>{title}</Text>
              <Text style={[styles.subheading1, { color: theme.subText, marginTop: 4 }]}>{listing.company}</Text>
            </View>
         </View>
@@ -311,11 +326,11 @@ const DetailScreen: React.FC<DetailProps> = ({ route, navigation }) => {
         <View style={[styles.metaContainer, { backgroundColor: theme.inputBg }]}>
           <View style={styles.metaItem}>
             <Text style={[styles.caption2, { color: theme.subText }]}>{t.deadline}</Text>
-            <Text style={[styles.caption1, { color: theme.text }]}>{listing.deadline}</Text>
+            <Text style={[styles.caption1, { color: theme.text }]}>{listing.applicationDeadline ?? '—'}</Text>
           </View>
           <View style={styles.metaItem}>
             <Text style={[styles.caption2, { color: theme.subText }]}>{t.term}</Text>
-            <Text style={[styles.caption1, { color: theme.text }]}>{listing.term}</Text>
+            <Text style={[styles.caption1, { color: theme.text }]}>{listing.term ?? '—'}</Text>
           </View>
           <View style={styles.metaItem}>
             <Text style={[styles.caption2, { color: theme.subText }]}>{t.location}</Text>
@@ -324,7 +339,7 @@ const DetailScreen: React.FC<DetailProps> = ({ route, navigation }) => {
         </View>
 
         <Text style={[styles.heading2, { color: theme.text }]}>{t.about}</Text>
-        <Text style={[styles.paragraph1, { color: theme.text }]}>{listing.description}</Text>
+        <Text style={[styles.paragraph1, { color: theme.text }]}>{description}</Text>
         
         <View style={styles.spacer} />
         <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.primary }]}>
@@ -378,7 +393,6 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   spacer: { height: 32 },
   
-  // Tab Updates
   tabScrollContent: { paddingHorizontal: 20, paddingBottom: 0 },
   tabButton: { paddingVertical: 12, marginRight: 24 },
   tabText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600' },
