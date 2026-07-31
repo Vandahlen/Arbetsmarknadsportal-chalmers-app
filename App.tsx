@@ -48,21 +48,31 @@ export type RootStackParamList = {
   Detail: { listing: Listing };
 };
 
-const FONT_FAMILY = 'System'; 
+// Open Sans, matching the Chalmers Studentkår "Grafisk profil" - see
+// agila's src/weekly-evaluation/theme/theme.ts for the source of truth.
+// fontWeight is kept alongside each family name since RN still needs it
+// to pick the right style on some platforms/OS versions.
+const FONT = {
+  regular: 'OpenSans-Regular',
+  medium: 'OpenSans-Medium',
+  semiBold: 'OpenSans-SemiBold',
+  bold: 'OpenSans-Bold',
+};
 
-// Fixed BRAND_COLORS order
+// Fixed BRAND_COLORS order - values verified against
+// "KAR-Grafisk profil" (Blå/Röd/Orange), same source agila's theme.ts uses.
 const BRAND_COLORS = {
   blue: '#00ACFF',
-  orange: '#FF8C00',
-  red: '#FF3B30',
+  orange: '#F86600',
+  red: '#D8004D',
 };
 
 const getTheme = (isDark: boolean) => ({
   background: isDark ? '#121212' : '#FFFFFF',
   card: isDark ? '#634C3D' : '#FFFFFF',
-  text: isDark ? '#FFFFFF' : '#1F2937',
+  text: isDark ? '#FFFFFF' : '#1A1A1A',
   subText: isDark ? '#A0A0A0' : '#634C3D',
-  border: isDark ? '#333333' : '#E5E7EB',
+  border: isDark ? '#333333' : '#E0E0E0',
   inputBg: isDark ? '#2C2C2C' : '#F3F4F6',
   primary: BRAND_COLORS.blue,
   orange: BRAND_COLORS.orange,
@@ -127,7 +137,7 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<string>('Examensarbete');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const { t, toggleLang } = useContext(I18nContext);
+  const { t, lang, toggleLang } = useContext(I18nContext);
   const theme = getTheme(useColorScheme() === 'dark');
 
   const userProgram = 'D'; // Hardcoded for testing.
@@ -152,8 +162,14 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: theme.text }]}>{t.title}</Text>
-        <TouchableOpacity onPress={toggleLang}>
-          <Text style={[styles.secondaryButtonText, { color: theme.primary }]}>{t.langToggle}</Text>
+        <TouchableOpacity
+          onPress={toggleLang}
+          style={styles.langToggle}
+          accessibilityRole="button"
+          accessibilityLabel={t.langToggle}
+        >
+          <Text style={[styles.langFlag, lang !== 'en' && styles.langFlagInactive]}>🇬🇧</Text>
+          <Text style={[styles.langFlag, lang !== 'sv' && styles.langFlagInactive]}>🇸🇪</Text>
         </TouchableOpacity>
       </View>
 
@@ -295,28 +311,31 @@ export default function App() {
 // --- 6. BASE STYLESHEET ---
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  title: { fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: '700' },
-  heading1: { fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: '700' },
-  heading2: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600', marginBottom: 4 },
-  subheading1: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' },
-  caption1: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', marginTop: 4, textTransform: 'uppercase' },
-  caption2: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '600', opacity: 0.7, textTransform: 'uppercase' },
-  label: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '700', marginRight: 8, marginTop: 4, textTransform: 'uppercase' },
-  paragraph1: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '400', lineHeight: 24, marginTop: 8 },
-  paragraph2: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '400', lineHeight: 20 },
-  primaryButton: { borderRadius: 24, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  title: { fontFamily: FONT.bold, fontSize: 30 },
+  heading1: { fontFamily: FONT.bold, fontSize: 20 },
+  heading2: { fontFamily: FONT.semiBold, fontSize: 16, marginBottom: 4 },
+  subheading1: { fontFamily: FONT.medium, fontSize: 11, marginBottom: 8, textTransform: 'uppercase' },
+  caption1: { fontFamily: FONT.regular, fontSize: 12, marginTop: 4 },
+  caption2: { fontFamily: FONT.regular, fontSize: 10 },
+  label: { fontFamily: FONT.regular, fontSize: 10, marginRight: 8, marginTop: 4, color: BRAND_COLORS.orange },
+  paragraph1: { fontFamily: FONT.regular, fontSize: 16, lineHeight: 24, marginTop: 8 },
+  paragraph2: { fontFamily: FONT.regular, fontSize: 13, lineHeight: 20 },
+  primaryButton: { borderRadius: 999, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { fontFamily: FONT.semiBold, fontSize: 16, color: '#FFFFFF' },
   secondaryButton: { paddingVertical: 8, paddingHorizontal: 0 },
-  secondaryButtonText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600' },
+  secondaryButtonText: { fontFamily: FONT.regular, fontSize: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  langToggle: { flexDirection: 'row', gap: 6, paddingVertical: 8, paddingHorizontal: 4 },
+  langFlag: { fontSize: 20 },
+  langFlagInactive: { opacity: 0.35 },
   spacer: { height: 32 },
   
   tabScrollContent: { paddingHorizontal: 20, paddingBottom: 0 },
   tabButton: { paddingVertical: 12, marginRight: 24 },
-  tabText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600' },
-  
+  tabText: { fontFamily: FONT.semiBold, fontSize: 13 },
+
   searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
-  searchInput: { borderRadius: 8, padding: 12, fontFamily: FONT_FAMILY, fontSize: 13 },
+  searchInput: { borderRadius: 8, padding: 12, fontFamily: FONT.regular, fontSize: 13 },
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   card: { flexDirection: 'row', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, alignItems: 'center' },
   logoPlaceholder: { width: 48, height: 48, borderRadius: 8, marginRight: 16 },
