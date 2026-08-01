@@ -15,6 +15,9 @@ import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navig
 
 // Import our new hotswappable Database Adapter
 import { DatabaseAdapter, type Listing } from './services/DatabaseAdapter';
+import SearchIcon from './components/SearchIcon';
+import FlagUK from './components/FlagUK';
+import FlagSE from './components/FlagSE';
 
 // --- 1. TYPES, THEME & DYNAMIC MAPPINGS ---
 
@@ -168,8 +171,8 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
           accessibilityRole="button"
           accessibilityLabel={t.langToggle}
         >
-          <Text style={[styles.langFlag, lang !== 'en' && styles.langFlagInactive]}>🇬🇧</Text>
-          <Text style={[styles.langFlag, lang !== 'sv' && styles.langFlagInactive]}>🇸🇪</Text>
+          <FlagUK style={lang !== 'en' ? styles.langFlagInactive : undefined} />
+          <FlagSE style={lang !== 'sv' ? styles.langFlagInactive : undefined} />
         </TouchableOpacity>
       </View>
 
@@ -189,9 +192,10 @@ const FeedScreen: React.FC<FeedProps> = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, styles.searchRow, { backgroundColor: theme.inputBg }]}>
+        <SearchIcon size={16} color={theme.subText} />
         <TextInput
-          style={[styles.searchInput, { backgroundColor: theme.inputBg, color: theme.text }]}
+          style={[styles.searchInput, { color: theme.text }]}
           placeholder={t.search}
           placeholderTextColor={theme.subText}
           value={searchQuery}
@@ -326,7 +330,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: { fontFamily: FONT.regular, fontSize: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   langToggle: { flexDirection: 'row', gap: 6, paddingVertical: 8, paddingHorizontal: 4 },
-  langFlag: { fontSize: 20 },
   langFlagInactive: { opacity: 0.35 },
   spacer: { height: 32 },
   
@@ -335,7 +338,8 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: FONT.semiBold, fontSize: 13 },
 
   searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
-  searchInput: { borderRadius: 8, padding: 12, fontFamily: FONT.regular, fontSize: 13 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, paddingHorizontal: 12, gap: 8 },
+  searchInput: { flex: 1, paddingVertical: 12, fontFamily: FONT.regular, fontSize: 13 },
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   card: { flexDirection: 'row', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, alignItems: 'center' },
   logoPlaceholder: { width: 48, height: 48, borderRadius: 8, marginRight: 16 },
