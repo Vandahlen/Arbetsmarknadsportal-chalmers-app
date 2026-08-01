@@ -14,7 +14,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 
 // Import our new hotswappable Database Adapter
-import { DatabaseAdapter, type Listing } from './services/DatabaseAdapter';
+import { createSupabaseListingsRepository, type Listing } from './services/DatabaseAdapter';
+
+const listingsRepository = createSupabaseListingsRepository();
 import SearchIcon from './components/SearchIcon';
 import FlagUK from './components/FlagUK';
 import FlagSE from './components/FlagSE';
@@ -114,8 +116,8 @@ const useListings = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Calls the adapter instead of Supabase directly
-      const data = await DatabaseAdapter.fetchAllListings();
+      // Calls the repository instead of Supabase directly
+      const data = await listingsRepository.fetchAllListings();
       setListings(data);
     } catch (err: any) {
       setError(err.message || 'Could not fetch data from the server.');
