@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   tabButton: { paddingVertical: 12, marginRight: 24 },
   tabText: { fontFamily: FONT.semiBold, fontSize: 13 },
 
-  searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
+  searchContainer: { marginHorizontal: 20, marginBottom: 16 },
   searchRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, paddingHorizontal: 12, gap: 8 },
   searchInput: { flex: 1, paddingVertical: 12, fontFamily: FONT.regular, fontSize: 13 },
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
