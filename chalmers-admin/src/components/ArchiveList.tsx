@@ -30,6 +30,7 @@ export default function ArchiveList({ onEdit }: ArchiveListProps) {
         await ListingsRepository.delete(id);
         setListings(prev => prev.filter(item => item.id !== id));
       } catch (error) {
+        console.error("Failed to delete", error);
         alert("Kunde inte radera annonsen.");
       }
     }
