@@ -17,9 +17,7 @@ import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navig
 import { createSupabaseListingsRepository, type IListingsRepository, type Listing } from './services/DatabaseAdapter';
 
 const listingsRepository = createSupabaseListingsRepository();
-import SearchIcon from './components/SearchIcon';
-import FlagUK from './components/FlagUK';
-import FlagSE from './components/FlagSE';
+import { SearchIcon, FlagUK, FlagSE } from 'kar-ui-kit';
 
 // --- 1. TYPES, THEME & DYNAMIC MAPPINGS ---
 

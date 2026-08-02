@@ -16,6 +16,7 @@
     "@react-navigation/native-stack": "^7.18.3",
     "@supabase/supabase-js": "^2.110.7",
     "@tailwindcss/cli": "^4.3.3",
+    "kar-ui-kit": "file:../kar-ui-kit",
     "react": "19.2.3",
     "react-native": "0.86.0",
     "react-native-safe-area-context": "^5.8.0",
