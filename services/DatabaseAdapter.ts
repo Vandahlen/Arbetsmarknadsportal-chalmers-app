@@ -26,14 +26,21 @@ export interface IListingsRepository {
 }
 
 export class SupabaseListingsRepository implements IListingsRepository {
-  private supabase = createClient(API_URL, API_KEY, {
-    auth: {
-      storage: AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-  });
+  private supabase = (() => {
+    if (!API_URL || !API_KEY) {
+      throw new Error(
+        'Missing API_URL or API_KEY. Copy .env.example to .env and fill in your real values.'
+      );
+    }
+    return createClient(API_URL, API_KEY, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
+  })();
 
   async fetchAllListings(): Promise<Listing[]> {
     const { data, error } = await this.supabase

@@ -14,7 +14,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 
 // Import our new hotswappable Database Adapter
-import { createSupabaseListingsRepository, type Listing } from './services/DatabaseAdapter';
+import { createSupabaseListingsRepository, type IListingsRepository, type Listing } from './services/DatabaseAdapter';
 
 const listingsRepository = createSupabaseListingsRepository();
 import SearchIcon from './components/SearchIcon';
@@ -107,7 +107,7 @@ const I18nContext = createContext({
 });
 
 // --- 3. CUSTOM HOOK (UI-Agnostic Fetching) ---
-const useListings = () => {
+const useListings = (repository: IListingsRepository = listingsRepository) => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,14 +117,14 @@ const useListings = () => {
     setError(null);
     try {
       // Calls the repository instead of Supabase directly
-      const data = await listingsRepository.fetchAllListings();
+      const data = await repository.fetchAllListings();
       setListings(data);
     } catch (err: any) {
       setError(err.message || 'Could not fetch data from the server.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [repository]);
 
   useEffect(() => {
     loadData();
