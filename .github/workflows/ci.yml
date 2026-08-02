@@ -1,0 +1,23 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Typecheck (mobile app only, excludes chalmers-admin/)
+        run: npx tsc --noEmit | grep -v "^chalmers-admin/" | (! grep .)
+      - run: npx eslint .
+      - run: npm test
+      - name: Install and build chalmers-admin
+        working-directory: chalmers-admin
+        run: npm install && npm run build
