@@ -39,6 +39,14 @@ jobs:
         run: npx tsc --noEmit | grep -v "^chalmers-admin/" | (! grep .)
       - working-directory: Chalmers-app-sommaren-2026
         run: npx eslint .
+      # App.tsx constructs SupabaseListingsRepository at module scope, which
+      # throws a readable error (by design - see DatabaseAdapter.ts) if
+      # API_URL/API_KEY are missing. .env is gitignored (contains secrets),
+      # so a fresh checkout has none - use the tracked placeholder values
+      # instead, since App.test.tsx never makes a real network call.
+      - name: Provide placeholder .env for tests
+        working-directory: Chalmers-app-sommaren-2026
+        run: cp .env.example .env
       - working-directory: Chalmers-app-sommaren-2026
         run: npm test
       - name: Install and build chalmers-admin
