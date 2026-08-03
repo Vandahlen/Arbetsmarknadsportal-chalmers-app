@@ -95,3 +95,15 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+## Known gaps / extension points
+
+- **No auth/session identity** - `IListingsRepository` assumes an
+  already-configured Supabase client (anon key, no per-user session).
+  A real auth requirement would add a parameter to
+  `createSupabaseListingsRepository`, not something swapping
+  implementations gives you for free.
+- **No write path for the external submission form** - the "Utomstående
+  får fylla i ett formulär för att skapa annons" feature from the
+  original spec isn't built; `IListingsRepository` only has
+  `fetchAllListings`.
