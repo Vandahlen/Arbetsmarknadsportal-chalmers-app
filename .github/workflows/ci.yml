@@ -4,20 +4,36 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: Chalmers-app-sommaren-2026
+      # kar-ui-kit is consumed via a `file:../kar-ui-kit` dependency, which
+      # only resolves because it's a sibling folder on a local dev machine.
+      # Check it out as a true sibling here too, so npm ci/tsc/eslint/jest
+      # can actually find it - without this, "Cannot find module 'kar-ui-kit'"
+      # is the only possible outcome, since nothing else provides that path.
+      - uses: actions/checkout@v4
+        with:
+          repository: Vandahlen/kar-ui-kit
+          path: kar-ui-kit
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci
+      - working-directory: Chalmers-app-sommaren-2026
+        run: npm ci
       - name: Typecheck (mobile app only, excludes chalmers-admin/)
+        working-directory: Chalmers-app-sommaren-2026
         run: npx tsc --noEmit | grep -v "^chalmers-admin/" | (! grep .)
-      - run: npx eslint .
-      - run: npm test
+      - working-directory: Chalmers-app-sommaren-2026
+        run: npx eslint .
+      - working-directory: Chalmers-app-sommaren-2026
+        run: npm test
       - name: Install and build chalmers-admin
-        working-directory: chalmers-admin
+        working-directory: Chalmers-app-sommaren-2026/chalmers-admin
         run: npm install && npm run build
