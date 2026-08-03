@@ -52,3 +52,42 @@ jobs:
       - name: Install and build chalmers-admin
         working-directory: Chalmers-app-sommaren-2026/chalmers-admin
         run: npm install && npm run build
+
+  ios:
+    # macos-14's default Xcode is 15.4; RN 0.86 requires >=16.1. macos-15
+    # defaults to a current Xcode that satisfies this.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Chalmers-app-sommaren-2026
+      - uses: actions/checkout@v4
+        with:
+          repository: Vandahlen/kar-ui-kit
+          path: kar-ui-kit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - working-directory: kar-ui-kit
+        run: npm ci
+      - working-directory: Chalmers-app-sommaren-2026
+        run: npm ci
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: Chalmers-app-sommaren-2026
+      - name: Install CocoaPods dependencies
+        working-directory: Chalmers-app-sommaren-2026/ios
+        run: bundle exec pod install
+      - name: Build for iOS Simulator
+        working-directory: Chalmers-app-sommaren-2026/ios
+        run: |
+          xcodebuild \
+            -workspace MyNewProject.xcworkspace \
+            -scheme MyNewProject \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            build \
+            CODE_SIGNING_ALLOWED=NO
